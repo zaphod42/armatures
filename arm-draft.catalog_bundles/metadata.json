@@ -1,0 +1,10 @@
+{
+   "arm": draft
+   "title": "Catalog Bundles"
+   "revision":"0.1.0",
+   "project":"https://github.com/zaphod42/puppet",
+   "requires-arms":[
+   ],
+   "issues":[
+   ]
+}
