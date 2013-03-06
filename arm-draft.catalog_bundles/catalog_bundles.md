@@ -4,23 +4,37 @@ Catalog Bundles
 What is a catalog bundle?
 -------------------------
 
-Tar file that contains:
+Directory structure that contains:
+
+````
   Metadata.json
-  data.tar.gz
+  catalog.json
+  index.json
+  data/
+  plugins/
+````
 
-Metadata.json:
+These could be stored dumbly on disk or we can create a storage and de-dup
+service much like puppetdb. By keeping this ARM agnostic as to the storage and
+distrobution requirements, it leaves open that to many possibly implementations,
+which allows the best system and workflow to be selected rather than imposing
+anything.
 
+Metadata.json
+-------------
+
+The Metadata.json file describes the contents of the bundle, the purpose is to provide
+a standard way of specifying the origin, trustworthiness, and format of the rest of the data
+contained in the bundle.
+
+TODO: How should we handle signing of the contents?
+
+### Format
 ````
   {
      bundle_format_version: *version_string // the catalog bundle format version
      bundle_id: *string   // arbitrary user specified identifier for the bundle
-     authority: *string   // public certificate of the signer of the content 
-                          // (do we need the whole thing?)
-     signiture: *string   // cryptographic signiture of the data.tar.gz file
-     certificate: *string // the public certificate of the owner of the data.tar.gz
-                          // (the node's public certificate) (do we need the whole thing?)
-     encrypted: *boolean  // whether the data.tar.gz file has been encrypted using
-                          // the certificate
+
      compiled_by: *string
      compiled_on: *date
 
@@ -32,19 +46,40 @@ Metadata.json:
   }
 ````
 
-data.tar.gz
+Catalog.json
+------------
+
+The puppet catalog, which describes the resources
+
+### Format
+
+Either the existing catalog format, or perhaps the catalog format used by PuppetDB.
+This is not yet determined.
+
+Index.json and the data directory
+----------
+
+The `index.json` file is an index of the files found in the `data` directory. The index
+also contains meta-information about the files, such as pre-computed checksums.
+
+### Format
+
 ````
-  catalog.json  // the catalog graph (format used by puppetdb? probably)
-  lib/          // dir of the extra code that the agent will need in order
-                // to apply the catalog (equivalent of the pluginsync)
-  data/         // dir of the file contents referenced by the catalog
-    \-> <digest of file contents> // the file contents. Each file is named 
-                                  // as the digest of the contents and contains
-                                  // simply the desired file contents
+  {
+    "<URI as referenced in the catalog>": {
+      data: "<name of file located in data directory>",
+      checksum: {
+        value: "<checksum value in hex encoding>",
+        type: Enum(md5, sha1, sha256)
+      }
+    },
+    ...
+  }
 ````
 
-These could be stored dumbly on disk or we can create a storage and de-dup
-service much like puppetdb. In the case of the service, they would have to be
-submitted unencryped and when they are requested they are possibly encrypted at
-that time (TLS would be enough by that point). The encryption option is mainly
-to support being able to hand around a catalog safely.
+Plugins
+-------
+
+In order to make the catalog bundle self-contained, the bundle also needs to include the
+plugins that will be needed in order to apply it. These are the types and providers referenced
+by the catalog.
